@@ -1,6 +1,6 @@
 import express from 'express';
-import mongoose, { mongo, Schema } from 'mongoose';
-import { ObjectId } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
+
 
 const app = express();
 app.use(express.json());
@@ -8,6 +8,10 @@ app.use(express.json());
 const URI = process.env.MONGODB_URI ?? 'mongodb://localhost:27017';
 const PUERTO = 3000;
 const BASE = 'analytics_web'
+
+// Período que cubren los datos de prueba.
+const DESDE_DEFAULT = '2026-09-01';
+const HASTA_DEFAULT = '2026-10-01';
 
 /**
  * MongoDB no exige esquema: la validación la pone la aplicación.
@@ -24,6 +28,21 @@ const Item = mongoose.model('Item', new Schema({
     categoria: String,
     precio: Number,
 }, { collection: 'items', versionKey: false }));
+
+const db = () => mongoose.connection.getClient().db(BASE);
+
+// Helper
+async function params(q: any) {
+    const sitio = q.sitio
+        ? new mongoose.Types.ObjectId(String(q.sitio))
+        : (await db().collection('sitios').findOne({}))!._id;
+    return {
+        sitio,
+        desde: new Date(`${q.desde ?? DESDE_DEFAULT}T00:00:00Z`),
+        hasta: new Date(`${q.hasta ?? HASTA_DEFAULT}T00:00:00Z`),
+    }
+}
+
 
 app.get('/api/salud', (req, resp) => {
     resp.json({ ok: true });
@@ -108,4 +127,22 @@ app.delete('/api/items/:id', async (req, resp) => {
     const item = await Item.findByIdAndDelete(req.params.id);
     if (!item) return resp.status(404).json({ error: 'No existe el item id' })
     resp.json({ borrado: true })
+});
+
+app.get('/api/reportes/items-mas-vistos', async (req, res) => {
+    const { sitio, desde, hasta } = await params(req.query);
+
+    const resultado = await db().collection('eventos').aggregate([
+        { $match: { sitio_id: sitio, tipo: 'pageview', ts: { $gte: desde, $lt: hasta } } },
+        { $group: { _id: '$page.item_id', vistas: { $sum: 1 }, visitantes: { $addToSet: '$visitante_id' } } },
+        { $match: { _id: { $ne: null } } },
+        { $project: { vistas: 1, visitantes_unicos: { $size: '$visitantes' } } },
+        { $sort: { vistas: -1 } },
+        { $limit: 10 },
+        { $lookup: { from: 'items', localField: '_id', foreignField: '_id', as: 'item' } },
+        { $unwind: '$item' },
+        { $project: { _id: 0, titulo: '$item.titulo', categoria: '$item.categoria', vistas: 1, visitantes_unicos: 1 } },
+    ]).toArray();
+
+    res.json(resultado);
 });
