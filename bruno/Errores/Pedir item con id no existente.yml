@@ -1,0 +1,16 @@
+info:
+  name: Pedir item con id no existente
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{URL}}/api/item/66f1000000000000000000ff"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

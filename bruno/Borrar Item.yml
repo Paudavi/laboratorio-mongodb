@@ -1,0 +1,16 @@
+info:
+  name: Borrar Item
+  type: http
+  seq: 11
+
+http:
+  method: DELETE
+  url: http://localhost:3000/api/items/6af61cbb6f39cfd408f264d4
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

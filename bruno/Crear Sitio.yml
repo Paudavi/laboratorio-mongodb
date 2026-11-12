@@ -1,0 +1,19 @@
+info:
+  name: Crear Sitio
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: http://localhost:3000/api/sitios
+  body:
+    type: json
+    data: '{ "nombre": "Sitio de prueba", "dominio": "prueba.uy" }'
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

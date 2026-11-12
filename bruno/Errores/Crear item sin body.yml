@@ -1,0 +1,16 @@
+info:
+  name: Crear item sin body
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{URL}}/api/items"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

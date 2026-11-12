@@ -1,0 +1,19 @@
+info:
+  name: Editar Item
+  type: http
+  seq: 10
+
+http:
+  method: PUT
+  url: http://localhost:3000/api/items/6af61cb46f39cfd408f264d3
+  body:
+    type: json
+    data: '{  "titulo": "Falda" }'
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

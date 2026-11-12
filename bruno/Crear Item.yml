@@ -1,0 +1,19 @@
+info:
+  name: Crear Item
+  type: http
+  seq: 9
+
+http:
+  method: POST
+  url: http://localhost:3000/api/items
+  body:
+    type: json
+    data: '{ "sitio_id": "6af61cb46f39cfd408f264d3", "titulo": "Remera" }'
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

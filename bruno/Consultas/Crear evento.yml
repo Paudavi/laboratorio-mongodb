@@ -1,0 +1,25 @@
+info:
+  name: Crear evento
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{URL}}/api/eventos"
+  body:
+    type: json
+    data: |-
+      {
+        "sitio_id": "66f1a2b3c4d5e6f700000001",
+        "sesion_id": "prueba-bruno-1",
+        "tipo": "click",
+        "page": { "path": "/prueba" }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

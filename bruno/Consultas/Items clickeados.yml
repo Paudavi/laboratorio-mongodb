@@ -1,0 +1,16 @@
+info:
+  name: Items clickeados
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{URL}}/api/reportes/ctr"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
