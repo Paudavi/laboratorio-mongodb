@@ -48,18 +48,6 @@ app.get('/api/salud', (req, resp) => {
     resp.json({ ok: true });
 });
 
-try {
-    await mongoose.connect(URI, { dbName: BASE });
-    console.log(`Conectado a ${BASE}`);
-    app.listen(PUERTO, () => {
-        console.log(`Escuchando en http://localhost:${PUERTO}`);
-    });
-} catch {
-    console.error(`No se puedo conectar a MongoDB en ${URI}`);
-    console.error('¿Está corriendo? Probá: brew services start mongodb-community');
-    process.exit(1);
-}
-
 app.get('/api/sitios', async (req, resp) => {
     const sitios = await Sitio.find();
     resp.json(sitios);
@@ -224,4 +212,27 @@ app.get('/api/contadores', async (_req, resp) => {
         totales[c] = await db().collection(c).countDocuments();
     }
     resp.json(totales);
+});
+
+try {
+    await mongoose.connect(URI, { dbName: BASE });
+    console.log(`Conectado a ${BASE}`);
+    app.listen(PUERTO, () => {
+        console.log(`Escuchando en http://localhost:${PUERTO}`);
+    });
+} catch {
+    console.error(`No se puedo conectar a MongoDB en ${URI}`);
+    console.error('¿Está corriendo? Probá: brew services start mongodb-community');
+    process.exit(1);
+}
+
+//Manejo de errores
+
+app.use((_req, resp) => {
+    resp.status(404).json({ error: 'Ruta no encontrada' });
+});
+
+app.use((err: any, _req: any, resp: any, _next: any) => {
+    const esValidacion = err?.name == 'ValidationError' || err?.name === 'CastError';
+    resp.status(esValidacion ? 400 : 500).json({ error: err.message })
 });
