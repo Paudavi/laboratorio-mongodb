@@ -146,3 +146,56 @@ app.get('/api/reportes/items-mas-vistos', async (req, res) => {
 
     res.json(resultado);
 });
+
+app.get('/api/reportes/ctr', async (req, res) => {
+    const { sitio, desde, hasta } = await params(req.query);
+
+    const resultado = await db().collection('eventos').aggregate([
+        { $match: { sitio_id: sitio, tipo: { $in: ['pageview', 'click'] }, ts: { $gte: desde, $lt: hasta } } },
+        {
+            $group: {
+                _id: '$page.path',
+                vistas: { $sum: { $cond: [{ $eq: ['$tipo', 'pageview'] }, 1, 0] } },
+                clicks: { $sum: { $cond: [{ $eq: ['$tipo', 'click'] }, 1, 0] } },
+            }
+        },
+        { $match: { vistas: { $gte: 100 } } },
+        { $project: { vistas: 1, clicks: 1, ctr: { $round: [{ $divide: ['$clicks', '$vistas'] }, 3] } } },
+        { $sort: { ctr: -1 } },
+    ]).toArray();
+
+    res.json(resultado);
+});
+
+app.get('/api/reportes/recorridos', async (req, res) => {
+    const { sitio, desde, hasta } = await params(req.query);
+
+    const resultado = await db().collection('eventos').aggregate([
+        { $match: { sitio_id: sitio, tipo: 'pageview', ts: { $gte: desde, $lt: hasta } } },
+        { $sort: { sesion_id: 1, ts: 1 } },
+        { $group: { _id: '$sesion_id', camino: { $push: '$page.path' } } },
+        { $project: { camino: { $slice: ['$camino', 4] } } },
+        { $match: { $expr: { $eq: [{ $size: '$camino' }, 4] } } },
+        { $group: { _id: '$camino', sesiones: { $sum: 1 } } },
+        { $sort: { sesiones: -1 } },
+        { $limit: 10 },
+    ]).toArray();
+
+    res.json(resultado);
+});
+
+app.get('/api/reportes/abandono', async (req, res) => {
+    const { sitio, desde, hasta } = await params(req.query);
+
+    const resultado = await db().collection('sesiones').aggregate([
+        { $match: { sitio_id: sitio, convirtio: false, inicio: { $gte: desde, $lt: hasta } } },
+        { $addFields: { total_pasos: { $size: '$pasos' } } },
+        { $unwind: '$pasos' },
+        { $match: { $expr: { $eq: ['$pasos.orden', '$total_pasos'] } } },
+        { $group: { _id: { path: '$pasos.path', profundidad: '$pasos.orden' }, cantidad: { $sum: 1 } } },
+        { $sort: { cantidad: -1 } },
+        { $limit: 15 },
+    ]).toArray();
+
+    res.json(resultado);
+});
