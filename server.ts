@@ -1,6 +1,6 @@
 import express from 'express';
 import mongoose, { Schema } from 'mongoose';
-
+import { ObjectId } from 'mongodb';
 
 const app = express();
 app.use(express.json());
@@ -34,7 +34,7 @@ const db = () => mongoose.connection.getClient().db(BASE);
 // Helper
 async function params(q: any) {
     const sitio = q.sitio
-        ? new mongoose.Types.ObjectId(String(q.sitio))
+        ? new ObjectId(String(q.sitio))
         : (await db().collection('sitios').findOne({}))!._id;
     return {
         sitio,
@@ -92,7 +92,7 @@ app.delete('/api/sitios/:id', async (req, resp) => {
 });
 
 app.get('/api/items', async (req, resp) => {
-    const filtro = req.query.sitio ? { sitio_id: new mongoose.Types.ObjectId(String(req.query.sitio)) } : {};
+    const filtro = req.query.sitio ? { sitio_id: new ObjectId(String(req.query.sitio)) } : {};
     const items = await Item.find(filtro);
     resp.json(items);
 });
@@ -198,4 +198,30 @@ app.get('/api/reportes/abandono', async (req, res) => {
     ]).toArray();
 
     res.json(resultado);
+});
+
+app.post('/api/eventos', async (req, resp) => {
+    const ev = req.body;
+
+    if (!ev?.tipo || !ev?.sesion_id) {
+        return resp.status(400).json({ error: 'Falta tipo o sesion_id' });
+    }
+
+    await db().collection('eventos').insertOne({
+        ...ev,
+        sitio_id: new ObjectId(String(ev.sitio_id)),
+        ts: new Date(ev.ts ?? Date.now()),
+    });
+
+    resp.status(201).json({ ok: true });
+});
+
+app.get('/api/contadores', async (_req, resp) => {
+    const colecciones = ['sitios', 'items', 'visitantes', 'sesiones', 'eventos', 'metricas_diarias'];
+    const totales: Record<string, number> = {};
+
+    for (const c of colecciones) {
+        totales[c] = await db().collection(c).countDocuments();
+    }
+    resp.json(totales);
 });
