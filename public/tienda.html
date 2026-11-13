@@ -67,6 +67,15 @@
         .tarjeta:hover {
             border-color: #222;
         }
+
+        #contadores td {
+            padding: 2px 12px 2px 0;
+        }
+
+        #contadores td:last-child {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
     </style>
 </head>
 
@@ -79,6 +88,8 @@
     <main id="pantalla">Cargando...</main>
 
     <aside>
+        <h3>Documentos en la base</h3>
+        <table id="contadores"></table>
         <h3>Último evento</h3>
         <pre id="ultimo">Todavía nada</pre>
         <h3>Historial</h3>
@@ -121,6 +132,15 @@
             historial.unshift(`${r.status}  ${tipo.padEnd(15)} ${evento.page.path}`);
             document.getElementById('ultimo').textContent = JSON.stringify(evento, null, 2);
             document.getElementById('historial').textContent = historial.slice(0, 12).join('\n');
+            actualizarContadores();
+        }
+
+        async function actualizarContadores() {
+            const r = await fetch('/api/contadores');
+            const datos = await r.json();
+            document.getElementById('contadores').innerHTML = Object.entries(datos)
+                .map(([coleccion, n]) => `<tr><td>${coleccion}</td><td>${n.toLocaleString('es-UY')}</td></tr>`)
+                .join('');
         }
 
         async function iniciar() {
