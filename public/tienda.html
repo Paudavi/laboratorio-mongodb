@@ -185,20 +185,44 @@
         }
 
         function agregar(id) {
-            carrito.push(items.find(i => i._id === id));
+            const item = items.find(i => i._id === id);
+            carrito.push(item);
+            enviar('add_to_cart',
+                { item_id: item._id, cantidad: 1, precio: item.precio_actual },
+                { titulo: item.titulo, item_id: item._id });
             ir('/carrito');
         }
 
         function irAPagar() {
+            const total = carrito.reduce((suma, i) => suma + i.precio_actual, 0);
+            enviar('checkout_start', { cant_items: carrito.length, monto_total: total });
             ir('/checkout');
         }
 
         function comprar() {
+            const total = carrito.reduce((suma, i) => suma + i.precio_actual, 0);
+            const detalle = carrito.map(i => ({ item_id: i._id, cantidad: 1, precio: i.precio_actual }));
+            const cantidad = carrito.length;
+
             carrito = [];
             ir('/checkout/confirmacion');
+            enviar('purchase', { monto_total: total, cant_items: cantidad, items: detalle });
         }
-
         iniciar();
+
+        document.addEventListener('click', (e) => {
+            const el = e.target.closest('button, .tarjeta, .logo');
+            if (!el) return;
+
+            enviar('click', {
+                elemento: {
+                    selector: '.' + el.classList[0],
+                    texto: el.textContent.trim().slice(0, 40),
+                    tag: el.tagName.toLowerCase(),
+                },
+            });
+        }, true);
+
     </script>
 </body>
 
