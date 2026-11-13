@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <title>Tienda Ejemplo</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 0;
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            grid-template-rows: auto 1fr;
+            min-height: 100vh;
+        }
+
+        header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 24px;
+            background: #222;
+            color: white;
+        }
+
+        header button {
+            background: white;
+        }
+
+        main {
+            padding: 24px;
+        }
+
+        aside {
+            background: #f4f4f4;
+            padding: 16px;
+            font-size: 12px;
+            border-left: 1px solid #ddd;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            margin: 0;
+        }
+
+        button {
+            padding: 8px 14px;
+            margin: 4px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .tarjeta {
+            display: inline-block;
+            width: 180px;
+            margin: 8px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            vertical-align: top;
+        }
+
+        .tarjeta:hover {
+            border-color: #222;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <strong class="logo" onclick="ir('/')" style="cursor:pointer">Tienda Ejemplo</strong>
+        <button class="btn-carrito" onclick="ir('/carrito')">Carrito (<span id="cant">0</span>)</button>
+    </header>
+
+    <main id="pantalla">Cargando...</main>
+
+    <aside>
+        <h3>Último evento</h3>
+        <pre id="ultimo">Todavía nada</pre>
+        <h3>Historial</h3>
+        <pre id="historial"></pre>
+    </aside>
+
+
+    <script>
+        const SITIO = '66f1a2b3c4d5e6f700000001';
+        let items = [];
+        let carrito = [];
+
+        let visitante = localStorage.getItem('visitante_id');
+        if (!visitante) {
+            visitante = 'v_web_' + Date.now();
+            localStorage.setItem('visitante_id', visitante);
+        }
+
+        const sesion = 's_web_' + Date.now();
+        let pathActual = '/';
+        const historial = [];
+
+        async function enviar(tipo, props = {}, extraPage = {}) {
+            const evento = {
+                sitio_id: SITIO,
+                sesion_id: sesion,
+                visitante_id: visitante,
+                ts: new Date().toISOString(),
+                tipo: tipo,
+                page: { path: pathActual, ...extraPage },
+                props: props,
+            };
+
+            const r = await fetch('/api/eventos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(evento),
+            });
+
+            historial.unshift(`${r.status}  ${tipo.padEnd(15)} ${evento.page.path}`);
+            document.getElementById('ultimo').textContent = JSON.stringify(evento, null, 2);
+            document.getElementById('historial').textContent = historial.slice(0, 12).join('\n');
+        }
+
+        async function iniciar() {
+            const r = await fetch(`/api/items?sitio=${SITIO}`);
+            items = await r.json();
+            ir('/');
+        }
+
+        function ir(path) {
+            pathActual = path;
+            document.getElementById('pantalla').innerHTML = dibujar(path);
+            document.getElementById('cant').textContent = carrito.length;
+
+            const item = items.find(i => i.url_path === path);
+            enviar('pageview', {}, item ? { titulo: item.titulo, item_id: item._id } : {});
+        }
+
+        function dibujar(path) {
+            if (path === '/') {
+                const categorias = [...new Set(items.map(i => i.categoria))];
+                return '<h2>Elegí una categoría</h2>' + categorias.map(c =>
+                    `<button class="nav-categoria" onclick="ir('/categoria/${c.toLowerCase()}')">${c}</button>`
+                ).join('');
+            }
+
+            if (path.startsWith('/categoria/')) {
+                const slug = path.split('/')[2];
+                const lista = items.filter(i => i.categoria.toLowerCase() === slug);
+                return `<h2>${lista[0].categoria}</h2>` + lista.map(i =>
+                    `<div class="tarjeta" onclick="ir('${i.url_path}')">
+         <strong>${i.titulo}</strong><br>$ ${i.precio_actual}
+       </div>`
+                ).join('');
+            }
+
+            if (path.startsWith('/productos/')) {
+                const item = items.find(i => i.url_path === path);
+                return `<h2>${item.titulo}</h2>
+            <p>${item.categoria} · $ ${item.precio_actual}</p>
+            <button class="btn-agregar" onclick="agregar('${item._id}')">Agregar al carrito</button>
+            <button class="btn-volver" onclick="ir('/categoria/${item.categoria.toLowerCase()}')">Volver</button>`;
+            }
+
+            if (path === '/carrito') {
+                if (carrito.length === 0) return '<h2>Tu carrito está vacío</h2>';
+                const total = carrito.reduce((suma, i) => suma + i.precio_actual, 0);
+                return '<h2>Tu carrito</h2>' +
+                    carrito.map(i => `<p>${i.titulo} — $ ${i.precio_actual}</p>`).join('') +
+                    `<p><strong>Total: $ ${total}</strong></p>
+       <button class="btn-pagar" onclick="irAPagar()">Ir a pagar</button>`;
+            }
+
+            if (path === '/checkout') {
+                return `<h2>Confirmá tu compra</h2>
+            <button class="btn-confirmar" onclick="comprar()">Confirmar compra</button>`;
+            }
+
+            if (path === '/checkout/confirmacion') {
+                return `<h2>¡Gracias por tu compra!</h2>
+            <button class="btn-seguir" onclick="ir('/')">Seguir comprando</button>`;
+            }
+        }
+
+        function agregar(id) {
+            carrito.push(items.find(i => i._id === id));
+            ir('/carrito');
+        }
+
+        function irAPagar() {
+            ir('/checkout');
+        }
+
+        function comprar() {
+            carrito = [];
+            ir('/checkout/confirmacion');
+        }
+
+        iniciar();
+    </script>
+</body>
+
+</html>

@@ -4,6 +4,7 @@ import { ObjectId } from 'mongodb';
 
 const app = express();
 app.use(express.json());
+app.use(express.static('public'));
 
 const URI = process.env.MONGODB_URI ?? 'mongodb://localhost:27017';
 const PUERTO = 3000;
@@ -26,7 +27,8 @@ const Item = mongoose.model('Item', new Schema({
     sitio_id: { type: Schema.Types.ObjectId, required: true },
     titulo: { type: String, required: true },
     categoria: String,
-    precio: Number,
+    precio_actual: Number,
+    url_path: String,
 }, { collection: 'items', versionKey: false }));
 
 const db = () => mongoose.connection.getClient().db(BASE);
@@ -195,12 +197,18 @@ app.post('/api/eventos', async (req, resp) => {
         return resp.status(400).json({ error: 'Falta tipo o sesion_id' });
     }
 
-    await db().collection('eventos').insertOne({
+    const nuevo = {
         ...ev,
         sitio_id: new ObjectId(String(ev.sitio_id)),
         ts: new Date(ev.ts ?? Date.now()),
-    });
+    };
 
+    if (ev.page?.item_id) {
+        nuevo.page = { ...ev.page, item_id: new ObjectId(String(ev.page.item_id)) };
+    }
+
+    await db().collection('eventos').insertOne(nuevo);
+    
     resp.status(201).json({ ok: true });
 });
 
