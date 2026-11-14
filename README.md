@@ -25,6 +25,11 @@ Versión reducida de una plataforma de analítica de comportamiento web, en la l
 ## Puesta en marcha
  
 Requiere **Node.js 20 o superior** y **MongoDB** corriendo en `localhost:27017`.
+
+Si MongoDB no está corriendo ejecutar (mac):
+```bash
+brew services start mongodb-community
+```
  
 ### 1. Cargar los datos de prueba
  
