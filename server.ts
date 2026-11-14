@@ -208,7 +208,7 @@ app.post('/api/eventos', async (req, resp) => {
     }
 
     await db().collection('eventos').insertOne(nuevo);
-    
+
     resp.status(201).json({ ok: true });
 });
 
@@ -241,6 +241,6 @@ app.use((_req, resp) => {
 });
 
 app.use((err: any, _req: any, resp: any, _next: any) => {
-    const esValidacion = err?.name == 'ValidationError' || err?.name === 'CastError';
+    const esValidacion = err?.name === 'ValidationError' || err?.name === 'CastError';
     resp.status(esValidacion ? 400 : 500).json({ error: err.message })
 });
